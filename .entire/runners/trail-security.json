@@ -1,0 +1,37 @@
+{
+  "id": "trail-security",
+  "display_name": "Security Review",
+  "enabled": true,
+  "scope": "trail",
+  "runtime": {
+    "kind": "prompt_runner",
+    "agent": "claude",
+    "timeout_ms": 300000,
+    "sandbox": {
+      "base_template": "claude",
+      "repo_token": "read"
+    }
+  },
+  "automation": {
+    "kind": "trail_prompt"
+  },
+  "prompt": {
+    "template": "You are a security risk evaluator. Analyze the changes on branch \"{{branch}}\" compared to \"{{base_branch}}\".\n\nThis repo (AgentKit) contains community-contributed Lamatic AI-agent kits (`flows/*.ts`, `scripts/` code nodes, `prompts/`, `constitutions/`, and Next.js `apps/`) that users fork and deploy with their own credentials. Many kits take untrusted user input into LLM prompts and tool calls.\n\nRun `git diff origin/{{base_branch}}...HEAD` to see the changes, then score **security risk** from 0 to 100 (review adversarially; higher = more suspicious or insecure). Check:\n\n1. **Secrets**: hard-coded API keys, tokens, flow/project IDs, committed `.env`, secrets in README examples, `NEXT_PUBLIC_` exposure, secrets in logs or responses.\n2. **Prompt injection and agent abuse**: user or retrieved content placed in system prompts undelimited; agents with tools or side effects (email, DB writes, SQL, HTTP, code exec) lacking allow-lists, validation, or confirmation; constitutions that are missing or weak.\n3. **Code nodes and server actions**: eval/exec/`Function`, shell or SQL built from input, SSRF through user-supplied URLs, path traversal, unvalidated parsing of LLM output.\n4. **App surface (`apps/`)**: unauthenticated endpoints or server actions that spend the owner's credits, missing rate/size limits, missing input validation, XSS from rendering model output (`dangerouslySetInnerHTML`, unsanitized markdown/HTML), open redirects, permissive CORS.\n5. **Supply chain**: new dependencies that are unpinned, typosquat-like, unmaintained, or with install scripts; remote scripts fetched at build/run time.\n6. **Repo and CI**: changes to `.github/` workflows (untrusted-PR triggers, `pull_request_target`, secret exposure, script injection via PR fields) or validation logic that weaken contributor checks.\n\nScore bands:\n- 0-15: no secrets, no side effects, input handled safely, no dependency or CI changes.\n- 16-40: minor hygiene gaps (missing validation or rate limiting on low-impact endpoints, loosely pinned deps).\n- 41-70: plausible injection or abuse paths, unauthenticated credit-spending endpoints, unsafe rendering, or side-effecting agent actions without gates.\n- 71-100: committed secrets, exec/eval or SQL/command injection, SSRF, malicious or suspicious dependencies or scripts, or CI changes exposing secrets or running untrusted code.\n\nOutput ONLY this JSON object as the very last line of your response:\n\n{\"value\": <number 0-100>, \"rationale\": \"<1-2 sentence explanation>\"}"
+  },
+  "select": {
+    "trigger_types": [
+      "api",
+      "push"
+    ]
+  },
+  "output": {
+    "adapter": "last_json_line",
+    "result_type": "trail_monitor",
+    "trail_monitor": {
+      "key": "security",
+      "label": "Security",
+      "value_type": "percent",
+      "polarity": "lower_is_better"
+    }
+  }
+}

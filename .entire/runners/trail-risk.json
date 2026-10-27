@@ -1,0 +1,37 @@
+{
+  "id": "trail-risk",
+  "display_name": "Risk Eval",
+  "enabled": true,
+  "scope": "trail",
+  "runtime": {
+    "kind": "prompt_runner",
+    "agent": "claude",
+    "timeout_ms": 300000,
+    "sandbox": {
+      "base_template": "claude",
+      "repo_token": "read"
+    }
+  },
+  "automation": {
+    "kind": "trail_prompt"
+  },
+  "prompt": {
+    "template": "You are a risk evaluator. Analyze the changes on branch \"{{branch}}\" compared to \"{{base_branch}}\".\n\nThis repo (AgentKit) is a showcase of forkable, deployable Lamatic AI-agent projects (`kits/<name>/`). Risk is mostly about what a user inherits when they fork and deploy a contribution, plus the blast radius on shared repo files. There is no shared runtime or database here.\n\nRun `git diff origin/{{base_branch}}...HEAD` to see the changes, then score **risk** from 0 to 100 (higher = more potential damage if something is wrong). Weigh:\n\n1. **Secrets and credentials**: hard-coded keys/tokens/IDs, committed `.env`, secrets leaking to client bundles or logs.\n2. **Agent side effects**: flows or apps that send messages, write to external systems, execute SQL/code/shell, or spend paid API/LLM credits, especially without validation, confirmation, or auth.\n3. **Untrusted input handling**: user input flowing unchecked into code nodes, prompts, URLs (SSRF), queries, or rendered HTML.\n4. **Deployability**: broken `@reference` paths, `envKey`/`.env.example` mismatches, wrong `type` vs layout, wrong deploy link, or flow graph errors that make a fork fail on setup.\n5. **Dependencies**: new or unpinned packages in `apps/package.json`, install scripts, suspicious or unmaintained libraries.\n6. **Shared surface**: changes to `.github/` workflows, `public/`, root docs, other kits, or CI validation logic that affect every contributor.\n\nScore bands:\n- 0-15: docs/asset-only or tightly scoped new kit with externalized prompts, no secrets, no side effects, consistent structure.\n- 16-40: new kit with LLM-only flows and a simple app; minor structural or error-handling gaps.\n- 41-70: flows or apps that call external services, write data, or run generated code/SQL with partial safeguards; unpinned or unusual dependencies; broken references.\n- 71-100: hard-coded or leaked secrets, unauthenticated endpoints spending credits, unguarded destructive or outbound actions, injection paths, or changes to CI workflows/other kits that can break or compromise all contributions.\n\nOutput ONLY this JSON object as the very last line of your response:\n\n{\"value\": <number 0-100>, \"rationale\": \"<1-2 sentence explanation>\"}"
+  },
+  "select": {
+    "trigger_types": [
+      "api",
+      "push"
+    ]
+  },
+  "output": {
+    "adapter": "last_json_line",
+    "result_type": "trail_monitor",
+    "trail_monitor": {
+      "key": "risk",
+      "label": "Risk",
+      "value_type": "percent",
+      "polarity": "lower_is_better"
+    }
+  }
+}

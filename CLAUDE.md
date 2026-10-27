@@ -275,3 +275,8 @@ When adding a new contribution, copy the shape of one of these:
 
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — step-by-step guide for adding a new contribution
 - [`README.md`](./README.md) — project overview and featured kits
+
+<!-- entire-agent:begin -->
+Read .entire/agent-guide.md for this repository's workflow, source inspection, and verification guidance.
+@.entire/agent-guide.md
+<!-- entire-agent:end -->

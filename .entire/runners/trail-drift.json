@@ -1,0 +1,37 @@
+{
+  "id": "trail-drift",
+  "display_name": "Drift Eval",
+  "enabled": true,
+  "scope": "trail",
+  "runtime": {
+    "kind": "prompt_runner",
+    "agent": "claude",
+    "timeout_ms": 300000,
+    "sandbox": {
+      "base_template": "claude",
+      "repo_token": "read"
+    }
+  },
+  "automation": {
+    "kind": "trail_prompt"
+  },
+  "prompt": {
+    "template": "You are a drift evaluator. Analyze the changes on branch \"{{branch}}\" compared to \"{{base_branch}}\".\n\nThis repo (AgentKit) has a strict, documented contribution convention: a flat `kits/<name>/` folder per contribution, typed as template (1 flow, no `apps/`), bundle (2+ flows, no `apps/`), or kit (flows + Next.js `apps/`).\n\nRun `git diff origin/{{base_branch}}...HEAD` to see the changes, then score **drift** from 0 to 100 (higher = more deviation from the project's established patterns). Check:\n\n1. **Layout**: contribution is directly under `kits/<name>/` (no categories, nested dirs, or edits to unrelated kits); required files exist (`lamatic.config.ts`, `agent.md`, `README.md`, `flows/`, `constitutions/default.md`); optional dirs use the standard names (`prompts/`, `scripts/`, `model-configs/`, `triggers/widgets/`, `memory/`, `tools/`, `assets/`).\n2. **Flow file shape**: one self-contained `.ts` per flow exporting `meta`, `inputs`, `references`, `nodes`, `edges` and a default export; optional top-of-file doc comment.\n3. **@reference system**: prompts, scripts, model configs, widget settings, memory, and tools are externalized with `@dir/file` references and the `<flow>_<node>_<role>` naming, rather than inlined in the graph.\n4. **Config conventions**: `lamatic.config.ts` has correct `type` (`as const`), author, lowercase plain tags, `steps` with `mandatory`/`any-of` kinds, and links (github URL, kit-only Vercel deploy link with root-directory `kits/<name>/apps`).\n5. **App conventions (kits)**: Next.js app under `apps/` with `actions/orchestrate.ts`, `lib/lamatic-client.ts`, `.env.example`; env-driven flow ids.\n6. **Scope**: changes confined to the contributed kit, except deliberate edits to shared files (`public/`, root docs, `.github/`).\n\nScore bands:\n- 0-15: follows the documented layout, flow shape, and reference conventions exactly.\n- 16-40: minor deviations (naming, optional dirs missing, inlined prompt or two).\n- 41-70: notable deviations such as inlined prompts/scripts throughout, missing constitution, wrong `type` for the layout, or nonstandard flow file structure.\n- 71-100: ignores the structure: nested/categorized placement, `apps/` in a template/bundle, hand-written flow shapes that Lamatic Studio export wouldn't produce, or edits spilling into unrelated kits or shared config.\n\nOutput ONLY this JSON object as the very last line of your response:\n\n{\"value\": <number 0-100>, \"rationale\": \"<1-2 sentence explanation>\"}"
+  },
+  "select": {
+    "trigger_types": [
+      "api",
+      "push"
+    ]
+  },
+  "output": {
+    "adapter": "last_json_line",
+    "result_type": "trail_monitor",
+    "trail_monitor": {
+      "key": "drift",
+      "label": "Drift",
+      "value_type": "percent",
+      "polarity": "lower_is_better"
+    }
+  }
+}
